@@ -1,0 +1,1 @@
+/home/pi/PythonLCD/Adafruit_CharLCDPlate/Adafruit_I2C.py
