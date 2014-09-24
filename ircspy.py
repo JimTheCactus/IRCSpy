@@ -83,12 +83,13 @@ class TestBot(irc.bot.SingleServerIRCBot):
                 self.line1offset = -self.startpause
             if self.line2offset > len(self.line2)-16+self.endpause:
                 self.line2offset = -self.startpause
+    def _dehost_nick(self, nick):
+        return nick.split("!")[0]        
 
     def on_action(self,c,e):
         self.lcd.clear()
-        plain_nick = e.source.split("!")[0]
         self._set_line1("*ACTION>" +e.target)
-        self._set_line2(plain_nick + " " + e.arguments[0])
+        self._set_line2(self._dehost_nick(e.source) + " " + e.arguments[0])
         return 
 
     def on_disconnect(self,c,e):
@@ -111,21 +112,27 @@ class TestBot(irc.bot.SingleServerIRCBot):
         c.join(self.channel)
 
     def on_join(self, c, e):
-        print "Joined " + e.target;
+        print self._dehost_nick(e.source) + " joined " + e.target;
         self._set_line1("INFO: JOIN")
-        self._set_line2(e.target);
+        self._set_line2(self._dehost_nick(e.source) + ">" + e.target);
+    
+    def on_part(self, c, e):
+        print self._dehost_nick(e.source) + " left " + e.target;
+        self._set_line1("INFO: PART")
+        self._set_line2(self._dehost_nick(e.source) + ">" + e.target);
+
+    def on_quit(self, c, e):
+        print self._dehost_nick(e.source) + " quit.";
+        self._set_line1("INFO: QUIT")
+        self._set_line2(self._dehost_nick(e.source) + ">" + e.arguments[0]);
 
     def on_privmsg(self, c, e):
-        self.lcd.clear()
-        plain_nick = e.source.split("!")[0] + ">" + e.target
-        self._set_line1(plain_nick)
+        self._set_line1(self._dehost_nick(e.source) + ">" + self._dehost_nick(e.target))
         self._set_line2(e.arguments[0])
         return 
 
     def on_pubmsg(self, c, e):
-        self.lcd.clear()
-        plain_nick = e.source.split("!")[0] + ">" + e.target
-        self._set_line1(plain_nick)
+        self._set_line1(self._dehost_nick(e.source) + ">" + e.target)
         self._set_line2(e.arguments[0])
         return 
 
