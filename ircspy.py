@@ -12,8 +12,8 @@ from Adafruit_CharLCDPlate import Adafruit_CharLCDPlate
 from irc.client import ip_numstr_to_quad, ip_quad_to_numstr
 
 class TestBot(irc.bot.SingleServerIRCBot):
-    def __init__(self, channel, nickname, server, port=6667):
-        irc.bot.SingleServerIRCBot.__init__(self, [(server, port)], nickname, nickname)
+    def __init__(self, channel, nickname, server, port=6667,password=None):
+        irc.bot.SingleServerIRCBot.__init__(self, [irc.bot.ServerSpec(server,port,password)], nickname, nickname)
         self.channel = channel
         # Create a mutex to handle our calls to the LCD
         self.lcdmutex = threading.RLock()
@@ -146,11 +146,11 @@ def main():
         port = 6667
     channel = sys.argv[2]
     nickname = sys.argv[3]
+    if len(sys.argv) == 5:
+        password = sys.argv[4]
 
     print "Connecting to " + sys.argv[1] + "..."
-    bot = TestBot(channel, nickname, server, port)
-    if len(sys.argv) == 5:
-        bot.server_list[0].password=sys.argv[4]
+    bot = TestBot(channel, nickname, server, port,password)
     print "Listening for server..."
     bot.start()
 
