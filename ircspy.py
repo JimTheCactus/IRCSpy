@@ -22,8 +22,10 @@ class TestBot(irc.bot.SingleServerIRCBot):
             self.lcd = Adafruit_CharLCDPlate()
             self.lcd.clear()
             self.lcd.backlight(self.lcd.ON)
-            self.line1 = "IRC Spy: INIT"
-            self.line2 = ""
+            self.line1 = "INFO: INIT"
+            self.line2 = "IRC Spy v1.0"
+            self.lcd.message("{0:<16}\n{1:<16}".format(self.line1,self.line2))
+
             self.startpause = 3 # This causes the message to pause 3 extra ticks at the start. Write to it to change this delay.
             self.endpause = 3 # This causes the message to pause 3 extra ticks at the end. Write to it to change this delay.
             self.line1offset = -self.startpause
@@ -81,24 +83,44 @@ class TestBot(irc.bot.SingleServerIRCBot):
                 self.line1offset = -self.startpause
             if self.line2offset > len(self.line2)-16+self.endpause:
                 self.line2offset = -self.startpause
+
     def on_action(self,c,e):
         self.lcd.clear()
-        plain_nick = e.source.split("!")[0] + ">" + e.target
-        self._set_line1(plain_nick)
-        self._set_line2("*" + e.arguments[0])
+        plain_nick = e.source.split("!")[0]
+        self._set_line1("*ACTION>" +e.target)
+        self._set_line2(plain_nick + " " + e.arguments[0])
         return 
+
+    def on_disconnect(self,c,e):
+        print "Disconnected!"
+        self._set_line1("ERROR:")
+        self._set_line2("Disconnected")
+
+    def on_passwdmismatch(self,c,e):
+        print "Password rejected!"
+        self._set_line1("ERROR:")
+        self._set_line2("Bad Password")
         
     def on_nicknameinuse(self, c, e):
         c.nick(c.get_nickname() + "_")
 
     def on_welcome(self, c, e):
-        self.lcd.clear()
-	self._set_line1("IRC Spy: Join")
-        self._set_line2(self.channel)
+        print "Connected. Joining channel " + self.channel + "..."
+	self._set_line1("INFO: CONNECT")
+        self._set_line2("Joining...")
         c.join(self.channel)
 
+    def on_join(self, c, e):
+        print "Joined " + e.target;
+        self._set_line1("INFO: JOIN")
+        self._set_line2(e.target);
+
     def on_privmsg(self, c, e):
-        pass
+        self.lcd.clear()
+        plain_nick = e.source.split("!")[0] + ">" + e.target
+        self._set_line1(plain_nick)
+        self._set_line2(e.arguments[0])
+        return 
 
     def on_pubmsg(self, c, e):
         self.lcd.clear()
@@ -107,25 +129,9 @@ class TestBot(irc.bot.SingleServerIRCBot):
         self._set_line2(e.arguments[0])
         return 
 
-    def on_dccmsg(self, c, e):
-        pass
-
-    def on_dccchat(self, c, e):
-        if len(e.arguments) != 2:
-            return
-        args = e.arguments[1].split()
-        if len(args) == 4:
-            try:
-                address = ip_numstr_to_quad(args[2])
-                port = int(args[3])
-            except ValueError:
-                return
-            self.dcc_connect(address, port)
-
 def main():
     import sys
-    if len(sys.argv) < 4 and len(sys.argv) > 5:
-        print("Usage: testbot <server[:port]> <channel> <nickname> [password]")
+    if len(sys.argv) < 4 or len(sys.argv) > 5:
         sys.exit(1)
 
     s = sys.argv[1].split(":", 1)
@@ -141,9 +147,11 @@ def main():
     channel = sys.argv[2]
     nickname = sys.argv[3]
 
+    print "Connecting to " + sys.argv[1] + "..."
     bot = TestBot(channel, nickname, server, port)
     if len(sys.argv) == 5:
         bot.server_list[0].password=sys.argv[4]
+    print "Listening for server..."
     bot.start()
 
 if __name__ == "__main__":
